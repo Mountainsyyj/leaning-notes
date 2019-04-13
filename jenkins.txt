@@ -1,0 +1,124 @@
+三个系统
+版本控制子系统
+	Subversion/git
+持续集成子系统
+	JDK、maven、Jenkins
+应用发布子系统
+	jdk、tomcat
+
+docker 
+	版本控制子系统
+		svn/git
+	持续集成子系统	
+		docker jdk maven jenkins
+	应用发布
+		
+		
+1.研发push到svn代码库
+2.Jenkins 构建，pull svn代码 使用maven进行编译打包
+3.打包生成的代码，生成一个新版本的镜像，push到本地docker仓库harbor
+4.发布，测试机器 pull 新版本的镜像，并删除原来的容器，重新运行新版本镜像。
+
+
+jdk
+	wget
+	tar -zxvf
+	vim /etc/profile
+		export JAVA_HOME=/root/jdk8/
+		export JRE_HOME=${JAVA_HOME}/jre
+		export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib
+		export PATH=${JAVA_HOME}/bin:$PATH
+	ln -s /root/jdk8/bin/java /usr/bin/java
+	source /etc/profile
+	java -version
+	
+	tomcat启动巨慢
+	$JAVA_PATH/jre/lib/security/java.security
+	securerandom.source=file:/dev/urandom
+
+svn
+	yum install subversion
+	svnadmin create /svn/yyj/
+	vim svnserve.conf
+		anon-access = read 
+		auth-access = write
+		password-db = passwd
+		authz-db = authz
+		realm = This is My First Test Repository
+	vim passwd
+		yyj = yyj123456
+	vim authz
+		[/]
+		yyj = rw
+		* = r
+	svnserve -d -r /svn/
+	
+maven
+	tar -zxvf  apache-maven-3.6.0-bin.tar.gz
+	vim /etc/profile
+		MAV_HOME = /root/maven3
+		export MAVEN_HOME
+		export PATH=$PATH:$JAVA_HOME/bin:$MAVEN_HOME/bin
+	source /etc/profile
+	mvn -v
+
+jenkins
+	1.下载jenkisn war包，放在tomcat下运行
+	2. vim /root/.jenkins/secrets/initialAdminPasswords
+	3.安装推荐插件
+	4.注册用户
+	5.系统管理
+		全局安全配置
+		全局工具配置
+			配置jdk maven
+		管理插件
+			deploy to container
+	6.新建项目
+		源码管理 svn  @HEAD
+		构建 maven3 clean install
+		构建后操作    
+			war/ear files  路径 Jenkins项目路径为根路径，对比工作区war包实际路径
+			部署服务器
+				<role rolename="manager-gui"/>
+				<role rolename="manager-script"/>
+				<role rolename="manager-jmx"/>
+				<role rolename="manager-status"/>
+				<role rolename="admin-gui"/>
+				<user username="tomcat_user" password="123456"
+				roles="manager-gui,manager-script,manager-jmx,manager-status,admin-gui" />
+			
+		vim /root/tomcat8deploy/webapps/manager/META-INF/context.xml
+			地址绑定
+			<Context antiResourceLocking="false" privileged="true" >
+			 <!-- <Valve className="org.apache.catalina.valves.RemoteAddrValve"
+					 allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" />
+			 -->
+		</Context>
+		
+	7.触发凭据
+		http://106.14.148.111:8080/jenkins/view/all/job/jenkinstest/build?token=LUMINUO_TOKEN
+
+		触发后，自动部署
+	8.svn钩子程序  
+		hooks post-commit.tmpl
+		linux curl 发送http请求
+			curl -X post -v -u yyj:yyj http://106.14.148.111:8080/jenkins/view/all/job/jenkinstest/build?token=LUMINUO_TOKEN
+
+		cp post-commit.tmpl post-commit
+		vim post-commit
+			curl -X post -v -u yyj:yyj http://106.14.148.111:8080/jenkins/view/all/job/jenkinstest/build?token=LUMINUO_TOKEN
+			其他注释
+		chmod +x post-commit
+		
+
+构建 自己的jenkins
+
+Push Over SSH 插件安装
+系统管理	系统设置   SSH Servers
+Maven Integration 插件安装
+
+
+git
+  git config --global user.name "yyj"
+  git config --global user.email "609082367@qq.com"
+   ssh-keygen -t rsa -C "609082367@qq.com"
